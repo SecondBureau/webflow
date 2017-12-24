@@ -11,9 +11,28 @@ class Webflow::Item < Webflow::Client
   attr_accessor :updatedOn, :createdOn, :publishedOn, :updatedBy, :createdBy, :publishedBy
   attr_accessor :fields
   
+  # TODO
+  # refactoring
+  def initialize(params=nil)
+    self.collection_id  = params.delete(:collection_id)
+    self.collection_id  = params.delete("_cid") if params.include?('_cid')
+    if collection_id.present?
+      att = attributes.dup
+      singleton_class.class_eval { attr_accessor *att } 
+    end
+    if params.present?
+      load(params) 
+      cast
+    end
+  end
+  
   def self.fieldnames(collection_id)
     @@fieldsnames ||= {}
     @@fieldsnames[collection_id] ||= (Webflow::Collection.find_by_id(collection_id).fields.collect{|_| _['slug']} - DEFAULT_FIELDS)
+  end
+  
+  def attributes
+    self.class.fieldnames(collection_id).collect{|m| m.underscore}
   end
   
   def self.all(collection_id=nil)
@@ -32,33 +51,37 @@ class Webflow::Item < Webflow::Client
     end
   end
   
-  def self.find_by_id(id, collection_id)
+  def self.get_item(collection_id, id)
+    response = get("/collections/#{collection_id}/items/#{id}")
+    new response['items'].first
+  end
+  
+  def self.find_by_id(params)
+    id            = params.delete(:id)
+    collection_id = params.delete(:collection_id)
     @@object ||= {}
-    @@object[Digest::MD5.hexdigest("#{id}-#{collection_id}") ] ||= self.new(get"/collections/:#{collection_id}/items/#{id}")
+    @@object[Digest::MD5.hexdigest("#{id}-#{collection_id}") ] ||= get_item(collection_id, id)
   end
   
   def data
-    (ATTRIBUTES + self.class.fieldnames(collection_id)).inject({}) { |h,e| h[e] = send(e) ; h}
+    (ATTRIBUTES + self.attributes).inject({}) { |h,e| h[e.dasherize] = send(e) ; h}
   end
   
   def create
-    puts data.inspect
-    item = post("/collections/#{collection_id}/items", fields: data.merge("_archived":false, "_draft":false))
+    item = post("/collections/#{collection_id}/items", {live: true, fields: data.merge("_archived":false, "_draft":false)})
     self.id = item["_id"]
   end
   
-  def save
-    puts data.inspect
-    item = put("/collections/#{collection_id}/items/{id}", fields: data.merge("_archived":false, "_draft":false))
+  def update
+    item = put("/collections/#{collection_id}/items/#{id}", fields: data.merge("_archived":false, "_draft":false))
+    self.id
   end
   
   private 
   
   def fields(params)
     self.class.fieldnames(collection_id).each do |slug|
-      key = slug.underscore
-      instance_variable_set("@#{key}", params.delete(slug))
-      self.class.send(:define_method, key) { instance_variable_get("@#{key}") }
+      self.send "#{slug.underscore}=", params.delete(slug)
     end
   end
   
@@ -66,7 +89,6 @@ class Webflow::Item < Webflow::Client
     super
     self.archived       = params.delete("_archived")
     self.draft          = params.delete("_draft")
-    self.collection_id  = params.delete("_cid") if params.include?('_cid')
     self.updatedOn      = params.delete("updated-on")
     self.createdOn      = params.delete("created-on")
     self.publishedOn    = params.delete("published-on")
