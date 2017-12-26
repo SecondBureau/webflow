@@ -68,7 +68,7 @@ class Webflow::Item < Webflow::Client
   end
   
   def create
-    item = post("/collections/#{collection_id}/items", {live: true, fields: data.merge("_archived":false, "_draft":false)})
+    item = post("/collections/#{collection_id}/items?live=true", {live: true, fields: data.merge("_archived":false, "_draft":false)})
     self.id = item["_id"]
   end
   
