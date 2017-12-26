@@ -64,16 +64,24 @@ class Webflow::Item < Webflow::Client
   end
   
   def data
-    (ATTRIBUTES + self.attributes).inject({}) { |h,e| h[e.dasherize] = send(e) ; h}
+    (ATTRIBUTES + self.attributes).inject({}) { |h,e| h[e.dasherize] = send(e) ; h}.merge("_archived":false, "_draft":false)
   end
   
-  def create
-    item = post("/collections/#{collection_id}/items?live=true", {live: true, fields: data.merge("_archived":false, "_draft":false)})
+  def save(live=true)
+    id.nil? ? create(live) : update(live)
+  end
+  
+  def create(live=true)
+    url = "/collections/#{collection_id}/items"
+    url = "#{url}?live=true" if live
+    item = post(url, {fields: data})
     self.id = item["_id"]
   end
   
-  def update
-    item = put("/collections/#{collection_id}/items/#{id}", fields: data.merge("_archived":false, "_draft":false))
+  def update(live=true)
+    url = "/collections/#{collection_id}/items/#{id}"
+    url = "#{url}?live=true" if live
+    item = put(url, fields: data)
     self.id
   end
   
