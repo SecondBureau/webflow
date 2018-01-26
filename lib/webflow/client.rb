@@ -1,6 +1,8 @@
 module Webflow
   class Client
     
+    class RateLimitError < StandardError; end
+    
     ATTRIBUTES = []
     
     attr_accessor :id
@@ -23,6 +25,7 @@ module Webflow
       if response.status.eql?(200)
         JSON.parse(response.body) 
       else
+        raiseLimitError response
         Rails.logger.error "\e[31m[WEBFLOW]\033[0m Error #{response.status}" 
         Rails.logger.debug "\e[36m[WEBFLOW]\033[0m #{response.inspect}" 
       end
@@ -41,6 +44,7 @@ module Webflow
       if response.status.eql?(200)
         JSON.parse(response.body) 
       else
+        raiseLimitError response
         Rails.logger.error "\e[31m[WEBFLOW]\033[0m Error #{response.status}" 
         Rails.logger.debug "\e[36m[WEBFLOW]\033[0m #{response.inspect}"
       end
@@ -55,6 +59,7 @@ module Webflow
       if response.status.eql?(200)
         JSON.parse(response.body) 
       else
+        raiseLimitError response
         Rails.logger.error "\e[31m[WEBFLOW]\033[0m Error #{response.status}" 
         Rails.logger.debug "\e[36m[WEBFLOW]\033[0m #{response.inspect}"
       end
@@ -88,6 +93,10 @@ module Webflow
     
     def cast
       self.createdOn = Time.parse(createdOn) rescue nil if self.respond_to?(:createdOn)
+    end
+    
+    def self.raiseLimitError(response)
+      raise RateLimitError if response.status.eql?(429) || response.status.eql?(400) && JSON.parse(response.body)['name'].eql?('RateLimit')
     end
         
   end
