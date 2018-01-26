@@ -2,6 +2,7 @@ module Webflow
   class Client
     
     class RateLimitError < StandardError; end
+    class ValidationError < StandardError; end
     
     ATTRIBUTES = []
     
@@ -25,7 +26,7 @@ module Webflow
       if response.status.eql?(200)
         JSON.parse(response.body) 
       else
-        raiseLimitError response
+        raise_rate_limit_error response
         Rails.logger.error "\e[31m[WEBFLOW]\033[0m Error #{response.status}" 
         Rails.logger.debug "\e[36m[WEBFLOW]\033[0m #{response.inspect}" 
       end
@@ -44,7 +45,8 @@ module Webflow
       if response.status.eql?(200)
         JSON.parse(response.body) 
       else
-        raiseLimitError response
+        raise_rate_limit_error response
+        raise_validation_error response
         Rails.logger.error "\e[31m[WEBFLOW]\033[0m Error #{response.status}" 
         Rails.logger.debug "\e[36m[WEBFLOW]\033[0m #{response.inspect}"
       end
@@ -59,7 +61,8 @@ module Webflow
       if response.status.eql?(200)
         JSON.parse(response.body) 
       else
-        raiseLimitError response
+        raise_rate_limit_error response
+        raise_validation_error response
         Rails.logger.error "\e[31m[WEBFLOW]\033[0m Error #{response.status}" 
         Rails.logger.debug "\e[36m[WEBFLOW]\033[0m #{response.inspect}"
       end
@@ -95,8 +98,28 @@ module Webflow
       self.createdOn = Time.parse(createdOn) rescue nil if self.respond_to?(:createdOn)
     end
     
-    def self.raiseLimitError(response)
-      raise RateLimitError if response.status.eql?(429) || response.status.eql?(400) && JSON.parse(response.body)['name'].eql?('RateLimit')
+    #TODO
+    #refactoring
+    
+    def self.raise_rate_limit_error(response)
+      if response.status.eql?(429) || (response.status.eql?(400) && JSON.parse(response.body)['name'].eql?('RateLimit'))
+        raise RateLimitError, response.inspect
+      end
+    end
+    
+    def raise_rate_limit_error(response)
+      self.class.raise_rate_limit_error response
+    end
+    
+    def self.raise_validation_error(response)
+      if response.status.eql?(400)
+        problems = JSON.parse(response.body)['problems']
+        raise ValidationError, problems.is_a?(Array) ? problems.join(' - ') : problems.to_s
+      end
+    end
+    
+    def raise_validation_error(response)
+      self.class.raise_validation_error response
     end
         
   end
