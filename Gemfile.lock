@@ -2,7 +2,7 @@ PATH
   remote: .
   specs:
     webflow (0.1.15)
-      faraday (~> 0.13)
+      faraday (>= 0.13, < 1.0)
 
 GEM
   remote: https://rubygems.org/
@@ -50,7 +50,7 @@ GEM
     concurrent-ruby (1.0.5)
     crass (1.0.3)
     erubi (1.7.0)
-    faraday (0.13.1)
+    faraday (0.17.5)
       multipart-post (>= 1.2, < 3)
     globalid (0.4.1)
       activesupport (>= 4.2.0)
@@ -63,12 +63,14 @@ GEM
       mini_mime (>= 0.1.1)
     method_source (0.9.0)
     mini_mime (1.0.0)
-    mini_portile2 (2.3.0)
+    mini_portile2 (2.8.0)
     minitest (5.10.3)
-    multipart-post (2.0.0)
+    multipart-post (2.1.1)
     nio4r (2.1.0)
-    nokogiri (1.8.1)
-      mini_portile2 (~> 2.3.0)
+    nokogiri (1.13.6)
+      mini_portile2 (~> 2.8.0)
+      racc (~> 1.4)
+    racc (1.6.0)
     rack (2.0.3)
     rack-test (0.8.2)
       rack (>= 1.0, < 3)
